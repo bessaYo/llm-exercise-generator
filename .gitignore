@@ -10,3 +10,6 @@ venv/
 # byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+# evaluation results
+evaluation/results/

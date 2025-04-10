@@ -1,19 +1,31 @@
+#!/usr/bin/env python
 import streamlit as st
+import tempfile
 from core.llm_processor import LLMProcessor
-from core.pdf_extractor import PDFExtractor
 from core.vector_store import VectorStore
 from core.bloom_classifier import BloomClassifier
 from core.assignment_repository import AssignmentRepository
-import tempfile
+from utils.text_helpers import (
+    format_slide_summaries,
+    extract_text_from_pdf,
+)
+from evaluation.evaluation_pipeline import evaluation_pipeline
+from components.sidebar import render_sidebar
+from components.instructions import render_instructions, render_input_fields
+from components.expanders import render_assignment_expander, render_summaries_expander
 
-# Initialize Question Generator and PDF Extractor
-llm_processor = LLMProcessor()
-pdf_extractor = PDFExtractor()
+
+# Initialize Classes
+question_model = LLMProcessor(model_name="qwen2.5-coder:7b", num_ctx=8192)
+answer_model = LLMProcessor(model_name="qwen2.5-coder:7b", num_ctx=8192)
+summary_model = LLMProcessor(model_name="gemma3:4b", num_ctx=4096)
 vector_store = VectorStore()
 bloom_classifier = BloomClassifier()
 assignment_repository = AssignmentRepository()
 
-st.html("""
+
+st.html(
+    """
     <style>
         .stMainBlockContainer {
             max-width:70rem;
@@ -21,68 +33,17 @@ st.html("""
     </style>
     """
 )
-# Sidebar for Model Selection
-st.sidebar.title("⚙️ Settings")
-model_options = ["qwen2.5-coder:7b", "llama3.2:latest", "deepseek-r1:latest"]
-selected_model = st.sidebar.selectbox("🧠 Open-Source Model:", model_options)
-llm_processor.set_model(selected_model)
 
-# **Sidebar: Question History**
-if "question_history" not in st.session_state:
-    st.session_state["question_history"] = []
-if "current_question" not in st.session_state:
-    st.session_state["current_question"] = None
-
-st.sidebar.subheader("Questions")
-
-if st.session_state["question_history"]:
-    for idx, q in enumerate(st.session_state["question_history"][::-1]):
-        with st.sidebar.expander(
-            f"{q[11:100]}..."
-        ):
-            st.write(q)
-else:
-    st.sidebar.write("No questions generated yet.")
-
-
-# Page Title
-st.title("Generating Programming Exercises with Open-Source LLM's")
-
-st.divider()
-
-
-# Description
-st.write(
-    """ 
-    This tool leverages Open-Source LLMs to generate **programming-related questions** based on **lecture slides**, a **topic**, and a **learning objective**.
-    
-    The learning objective is classified according to a cognitive level of **Bloom’s Taxonomy** and forms the basis for the question generation. 
-
-
-    1️⃣ **Define the topic** – Specifies the subject area of the generated question  
-    2️⃣ **Set the learning objective** – Describes what students should learn or achieve through the question    
-    3️⃣ **Upload lecture slides (PDF format only)** – Extraction of key concepts and programming examples    
-    """
+# Sidebar for model selection
+question_model, answer_model, summary_model = render_sidebar(
+    question_model, answer_model, summary_model
 )
 
-st.divider()
+# Render instructions
+render_instructions()
+topic, learning_objective, uploaded_files = render_input_fields()
 
-
-# Input fields
-topic = st.text_input(
-    "📌 Topic:", placeholder="E.g., Introduction to Haskell Programming"
-)
-learning_objective = st.text_area(
-    "🎯 Learning Objective:",
-    placeholder="E.g., Students should be able to explain quicksort and its time complexity.",
-)
-
-# File uploader for PDFs
-uploaded_files = st.file_uploader(
-    "📄 Upload Lecture PDFs (optional):", type=["pdf"], accept_multiple_files=True
-)
-
-# Process uploaded PDFs with loading spinner
+# Process uploaded PDFs
 extracted_documents = []
 if uploaded_files:
     with st.spinner("📥 Storing PDFs in Database... Please wait."):
@@ -91,10 +52,10 @@ if uploaded_files:
                 temp_pdf.write(uploaded_file.read())
 
                 # Extract documents
-                documents = pdf_extractor.extract_text_pypdf(temp_pdf.name)
+                documents = extract_text_from_pdf(temp_pdf.name)
                 extracted_documents.extend(documents)
 
-        # Speichere alles im VectorStore
+        # Save extracted documents to vector store
         vector_store.add_documents(extracted_documents)
 
         st.success(
@@ -110,9 +71,11 @@ if uploaded_files:
                 height=150,
             )
 
-# Generate Question Button
+# Generate question pipeline
 if st.button("Generate Question"):
     st.divider()
+
+    # Validate inputs
     if not topic.strip() and not learning_objective.strip():
         st.warning("⚠ Please enter a topic and a learning objective.")
     elif not topic.strip():
@@ -120,7 +83,7 @@ if st.button("Generate Question"):
     elif not learning_objective.strip():
         st.warning("⚠ Please enter a learning objective.")
     else:
-
+        # 1: Classify Bloom's Taxonomy level
         with st.spinner(
             "🔍 Determining the Bloom’s Taxonomy level for the learning objective..."
         ):
@@ -135,6 +98,7 @@ if st.button("Generate Question"):
                 "⚠ No matching Bloom level found. Please refine the learning objective."
             )
 
+        # 2: Determine corresponding assignment sheets
         with st.spinner("Determining corresponding example assignments..."):
             assignments = [
                 assignment
@@ -142,61 +106,63 @@ if st.button("Generate Question"):
                 for assignment in assignment_repository.get_assignments(level)
             ]
 
+        # Show assignment descriptions in an expander
         if assignments:
-            st.success(f"✅ Corresponding Assignments Sheets found.")
-
-            with st.expander("📂 View Assignment Sheets", expanded=False):
-                for i, assignment in enumerate(assignments, 1):
-                    st.text_area(
-                        f"📄 Assignment {i}:",
-                        assignment,
-                        height=100,
-                    )
+            st.success("✅ Corresponding Assignment Sheets found.")
+            formatted_assignments = render_assignment_expander(assignments)
         else:
             st.warning("⚠ No assignment sheets found.")
 
+        # 3: Find relevant slides and generate summaries
         with st.spinner("🔍 Finding relevant slides and generating summaries..."):
             related_docs = vector_store.find_related_documents(learning_objective, k=2)
-            summaries = (
-                [
-                    llm_processor.generate_summary(doc.page_content)
-                    for doc in related_docs
-                ]
-                if related_docs
-                else []
-            )
-
+            summaries = []
+            if related_docs:
+                try:
+                    summaries = [
+                        summary_model.generate_summary(doc.page_content)
+                        for doc in related_docs
+                    ]
+                except Exception as e:
+                    st.error(
+                        "Could not generate summaries. Make sure the model is available. Try running `ollama list` to check the model status."
+                        f"Error: {e}"
+                    )
+            # Show summaries in an expander
             if related_docs and summaries:
                 st.success(
                     f"✅ Found {len(related_docs)} relevant slides. Corresponding summaries successfully generated."
                 )
-                with st.expander("📂 View Summaries of Related Slides", expanded=False):
-                    for summary in summaries:
-                        st.text_area(
-                            f"📄 Summary of page {summary['page_number']}:",
-                            summary["summary"],
-                            height=100,
-                        )
+                render_summaries_expander(summaries)
             elif related_docs:
                 st.warning("⚠ Slides were found, but no summaries could be generated.")
             else:
                 st.warning("⚠ No relevant slides found.")
 
+        # 4: Generate question
         with st.spinner("🧠 Generating question..."):
-            summary_contents = [summary["summary"] for summary in summaries]
-            response = llm_processor.generate_question(
-                topic, learning_objective, summary_contents, assignments, levels[0]
+            summary_contents = [s["summary"] for s in summaries if isinstance(s, dict)]
+            formatted_summaries = format_slide_summaries(summary_contents)
+
+            question = question_model.generate_question(
+                topic,
+                learning_objective,
+                formatted_summaries,
+                formatted_assignments,
+                levels[0],
             )
 
-            if response:
-                st.success("✅ Question successfully generated.")
-
-                st.session_state["question_history"].append(response)
-
-                st.markdown("### 🧪 Generated Question")
-                st.write(response)
-    
-            else:
+            if not question:
                 st.warning(
                     "⚠ No question could be generated. Please check your inputs."
                 )
+            else:
+                st.success("✅ Question successfully generated.")
+                st.write(question)
+
+        if question:
+            evaluation_pipeline(
+                question,
+                formatted_assignments,
+                levels[0],
+            )
