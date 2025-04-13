@@ -1,25 +1,36 @@
-understand_assignments = [{
-  "bloom_level": "understand",
-  "title": "Empty List vs List with Empty List",
-  "description": "Do both the symbols [] and [[]] represent the empty list? Motivate your answer and explain the difference in their structure and type.",
-  "language": "Haskell",
-  "tags": ["lists", "types", "structure"],
-},{
-  "bloom_level": "understand",
-  "title": "Differentiate Haskell representations of characters and strings",
-  "description": "Explain the difference between the following in Haskell: a, 'a', ['a'], and \"a\". Discuss their types and meanings.",
-  "language": "Haskell",
-  "tags": ["types", "characters", "strings"],
-},{
-  "bloom_level": "understand",
-  "title": "Analyze a type error in Haskell",
-  "description": "Explain why the expression (not 'a') results in a type error in Haskell. Provide an informal argument for how the error arises.",
-  "language": "Haskell",
-  "tags": ["type errors", "boolean", "characters", "not"],
-},{
-  "bloom_level": "understand",
-  "title": "Infer type of function application",
-  "description": "Given a function `foo` of type `Char -> String` and a value `bar` of type `Char`, determine the type of the expression `(foo bar)` and explain your reasoning.",
-  "language": "Haskell",
-  "tags": ["types", "function application", "inference"],
-}]
+understand_assignments = [
+    {
+        "question_type": "Identify general types of expressions",
+        "question_text": "What are the most general types of the following expressions? Answer using Haskell type notation.",
+        "subtasks": {
+            "i": '"404"',
+            "ii": '([404,4], ["HTTP", "Tires"])',
+            "iii": '[[], ""]',
+            "iv": "[filter not]",
+        },
+    },
+    {
+        "question_type": "Explain type errors",
+        "question_text": "Explain why the expression (not 'a') results in a type error in Haskell. Provide an informal argument for how the error arises.",
+        "subtasks": {},
+    },
+    {
+        "question_type": "Explain well-typed expressions",
+        "question_text": "Which of the following Haskell expressions are well typed?",
+        "subttasks": {
+            "a": "['1', '2', '3']",
+            "b": "[1] ++ ['a']",
+            "c": '("1, 2",("3"))',
+            "d": "[tail, init, reverse]",
+        },
+    },
+    {
+        "question_type": "Explain result of functions",
+        "question_text": "Explain the result of the following functions:",
+        "subtasks": {
+            "a": "foo xs = map (+1) (map (+1) xs)",
+            "b": "bar xs = sum (map (\_ -> 1) (filter (> 7) (filter (< 13) xs)))",
+            "c": "baz xss = map (map (+1)) xss",
+        },
+    },
+]
