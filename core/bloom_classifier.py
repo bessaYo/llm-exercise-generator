@@ -58,9 +58,11 @@ class BloomClassifier:
             "model",
             "perform",
             "present",
+            "express",
         ],
         "understand": [
             "describe",
+            "differentiate",
             "explain",
             "paraphrase",
             "restate",
@@ -68,6 +70,7 @@ class BloomClassifier:
             "contrast",
             "interpret",
             "discuss",
+            "elaborate",
         ],
         "remember": [
             "list",
@@ -81,6 +84,8 @@ class BloomClassifier:
             "identify",
             "label",
             "recognize",
+            "reproduce",
+            "review",
         ],
     }
 

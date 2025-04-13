@@ -43,10 +43,10 @@ def evaluation_pipeline(question, assignments, target_bloom):
     word_count = len(question_json["full_markdown"].split())
 
     # Assignment Similarity
-    question_similarity = util.pytorch_cos_sim(
+    assignment_similarity = util.pytorch_cos_sim(
         question_embedding, assignments_embeddings
     ).tolist()
-    question_similarity = [float(x) for x in question_similarity[0]]
+    assignment_similarity = [float(x) for x in assignment_similarity[0]]
 
     # Code Compilation
     haskell_code = question_json["code"]
@@ -67,7 +67,7 @@ def evaluation_pipeline(question, assignments, target_bloom):
         target_bloom,
         readability_score,
         word_count,
-        sum(question_similarity) / len(question_similarity),
+        assignment_similarity,
         compilation_result,
         evaluation_results,
     )
@@ -80,7 +80,7 @@ def export_results(
     target_bloom,
     readability_score,
     word_count,
-    avg_similarity,
+    assignment_similarity,
     compilation_result,
     evaluation_results,
 ):
@@ -95,7 +95,7 @@ def export_results(
         "target_bloom": target_bloom,
         "readability_score": readability_score,
         "word_count": word_count,
-        "avg_similarity": avg_similarity,
+        "assignment_similarity": assignment_similarity,
         "compilation_result": compilation_result,
         "evaluation_results": evaluation_results,
     }

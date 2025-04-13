@@ -43,7 +43,7 @@ class LLMProcessor:
 
     def generate_answer(self, generated_question):
         prompt = create_answer_prompt(generated_question)
-        response = self.chain.stream(prompt)
+        response = self.chain.invoke(prompt)
         return response
 
     def generate_summary(self, slide_text):

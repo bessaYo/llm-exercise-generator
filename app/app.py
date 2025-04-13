@@ -161,6 +161,17 @@ if st.button("Generate Question"):
                 st.write(question)
 
         if question:
+            # 5: Generate answer
+            with st.spinner("Generating answer..."):
+                answer = answer_model.generate_answer(question)
+                if not answer:
+                    st.warning(
+                        "⚠ No answer could be generated. Please check your inputs."
+                    )
+                else:
+                    st.write(answer)
+                    st.divider()
+
             evaluation_pipeline(
                 question,
                 formatted_assignments,

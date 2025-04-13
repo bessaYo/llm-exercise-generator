@@ -3,22 +3,35 @@ def create_summary_prompt(slide_text):
 You are an AI assistant summarizing a single lecture slide from a programming course.
 
 ---
+
 **Slide Text:**
 {slide_text}
 
-**Your Task:**
-1. Extract the page number (usually at the end of the slide).
-2. Summarize the slide in 1–2 concise sentences.
-- Focus on technical content and key concepts.
-- Include all code snippets **verbatim** (unchanged).
-- Do not add explanations or background knowledge.
+---
 
-**Output Format (strict JSON, very important!):**
-```json
+**Your Task:**
+
+Your summary will be used later as context for generating programming exercises.  
+Therefore, it must focus strictly on **code-related content**, especially key definitions, concepts, and any code examples.
+
+Please follow these rules:
+
+1. **Extract the page number** (usually at the end of the slide text).
+2. **Summarize the slide** in 2–3 short sentences:
+   - Include **all code snippets verbatim** (unchanged).
+   - Focus only on **technical and code-related content**.
+3. **If no relevant code or concept is present, return an empty summary.**
+
+---
+
+### OUTPUT FORMAT (strict JSON only – no extra text, no formatting):
+
 {{
-"page_number": <Extracted Page Number>,
-"summary": "<Concise, code-focused summary>"
+  "page_number": <Extracted Page Number>,
+  "summary": "<Concise, code-focused summary>"
 }}
+
+Return **only valid JSON** – no markdown code blocks, no explanations, no surrounding text.
 """
 
 
