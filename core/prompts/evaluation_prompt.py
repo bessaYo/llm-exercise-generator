@@ -1,31 +1,35 @@
-def create_evaluation_prompt(question):
+def create_evaluation_prompt(exercise):
     return f"""
-You are an expert in computer science education. Your task is to analyze a programming-related question and assign it to the most appropriate level of Bloom’s Taxonomy.
+You are an expert in computer science education. Your task is to analyze a programming-related exercise and assign it to the most appropriate level of Bloom’s Taxonomy.
 
-Choose exactly **one** of the following Bloom levels, based on the cognitive process the question demands from the student.
+Choose exactly one of the following Bloom levels, based on the cognitive process the exercise demands from the student.
 
-Definitions for each level:
+Identify the main mental operation required from the student by using the following definitions per level:
 
-- **Remember**: Retrieving, recognizing, and recalling relevant knowledge from long-term memory.
-- **Understand**: Constructing meaning from oral, written, and graphic messages through interpreting, exemplifying, classifying, summarizing, inferring, comparing, and explaining.
-- **Apply**: Carrying out or using a procedure for executing or implementing.
-- **Analyze**: Breaking material into constituent parts and determining how the parts relate to one another and to an overall structure or purpose through differentiating, organizing, and attributing.
-- **Evaluate**: Making judgments based on criteria and standards through checking and critiquing.
-- **Create**: Putting elements together to form a coherent or functional whole; reorganizing elements into a new pattern or structure through generating, planning, or producing.
+- Remember: Remember-level exercises require students to recall specific facts, definitions, or syntax. Exercises should prompt precise retrieval of knowledge, such as exact syntax, keywords, or function names, without requiring deeper interpretation.
+
+- Understand: Understand-level exercises ask students to clearly explain concepts, interpret code behaviors, or describe functionalities using their own words. Exercises must prompt detailed explanations or illustrative examples, encouraging deep comprehension rather than simple recall.
+
+- Apply: Apply-level exercises require students to demonstrate their ability to use known concepts or functions in new and practical contexts. Tasks should clearly specify novel scenarios or data, demanding active application of previously learned methods rather than direct repetition.
+
+- Analyze: Analyze-level exercises prompt students to critically examine code structures, behaviors, or logic. Tasks must involve detailed investigation or comparisons, clearly requiring identification of patterns, differences, or potential issues in code.
+
+- Evaluate: Evaluate-level exercises require students to judge the correctness, efficiency, readability, or quality of provided code. Exercises must clearly set criteria for evaluation, guiding students to substantiate their judgments with precise reasoning.
+
+- Create: Create-level exercises challenge students to design new solutions, data structures, or significant code reorganizations. Tasks must clearly prompt original and creative production, encouraging novel designs rather than modifications of provided examples.
 
 ---
 
 ### Instructions:
-- Read the question carefully.
-- Identify the **main mental operation** the student is expected to perform.
-- Choose **only one** Bloom level from the list.
-- Return **only the level name**, like: `Understand` (no explanation, no formatting, no punctuation).
+- Read the exercise carefully.
+- Choose only one Bloom level from the list above.
+- Return only the level name, like: `Understand` (no explanation, no formatting, no punctuation).
 
 ---
 
-### Question:
-{question}
+### Exercise:
+{exercise}
 
 ### Output:
-Single Bloom level name (no explanation, no formatting, no punctuation).
+Single Bloom level name.
 """

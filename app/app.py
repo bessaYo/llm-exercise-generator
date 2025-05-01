@@ -1,29 +1,61 @@
 #!/usr/bin/env python
 import streamlit as st
 import tempfile
+import os
 from core.llm_processor import LLMProcessor
 from core.vector_store import VectorStore
 from core.bloom_classifier import BloomClassifier
-from core.assignment_repository import AssignmentRepository
-from utils.text_helpers import (
-    format_slide_summaries,
+from utils.formatters import format_summaries_as_prompt
+from utils.helper_functions import (
     extract_text_from_pdf,
+    clean_markdown_json,
 )
 from evaluation.evaluation_pipeline import evaluation_pipeline
 from components.sidebar import render_sidebar
-from components.instructions import render_instructions, render_input_fields
-from components.expanders import render_assignment_expander, render_summaries_expander
+from components.displays import (
+    render_exercise,
+    render_input_fields,
+    render_instructions,
+)
+from components.expanders import (
+    render_assignment_expander,
+    render_summaries_expander,
+    render_slide_content_expander,
+)
+from core.example_assignments import exercise_types
 
+# Disable parallel tokenizers warning
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# Initialize Classes
-question_model = LLMProcessor(model_name="qwen2.5-coder:7b", num_ctx=8192)
+# --- Session State Initialization ---
+if "vector_store" not in st.session_state:
+    st.session_state["vector_store"] = VectorStore()
+if "extracted_documents" not in st.session_state:
+    st.session_state["extracted_documents"] = []
+if "uploaded_files_names" not in st.session_state:
+    st.session_state["uploaded_files_names"] = []
+if "topic" not in st.session_state:
+    st.session_state["topic"] = ""
+if "learning_objective" not in st.session_state:
+    st.session_state["learning_objective"] = ""
+if "summaries" not in st.session_state:
+    st.session_state["summaries"] = []
+if "summaries_topic" not in st.session_state:
+    st.session_state["summaries_topic"] = ""
+if "summaries_learning_objective" not in st.session_state:
+    st.session_state["summaries_learning_objective"] = ""
+if "summaries_uploaded_files" not in st.session_state:
+    st.session_state["summaries_uploaded_files"] = []
+
+vector_store = st.session_state["vector_store"]
+
+# --- Initialize LLMs and Bloom Classifier ---
+exercise_model = LLMProcessor(model_name="qwen2.5-coder:7b", num_ctx=8192)
 answer_model = LLMProcessor(model_name="qwen2.5-coder:7b", num_ctx=8192)
 summary_model = LLMProcessor(model_name="gemma3:4b", num_ctx=4096)
-vector_store = VectorStore()
 bloom_classifier = BloomClassifier()
-assignment_repository = AssignmentRepository()
 
-
+# --- HTML Styling ---
 st.html(
     """
     <style>
@@ -34,146 +66,183 @@ st.html(
     """
 )
 
-# Sidebar for model selection
-question_model, answer_model, summary_model = render_sidebar(
-    question_model, answer_model, summary_model
+# --- Sidebar and Inputs ---
+exercise_model, answer_model, summary_model = render_sidebar(
+    exercise_model, answer_model, summary_model
 )
 
-# Render instructions
 render_instructions()
-topic, learning_objective, uploaded_files = render_input_fields()
+topic_input, learning_objective_input, uploaded_files = render_input_fields()
 
-# Process uploaded PDFs
-extracted_documents = []
+# Update Session State for Topic and Learning Objective
+if topic_input:
+    st.session_state["topic"] = topic_input
+if learning_objective_input:
+    st.session_state["learning_objective"] = learning_objective_input
+
+# --- Process Uploaded PDFs ---
 if uploaded_files:
-    with st.spinner("📥 Storing PDFs in Database... Please wait."):
-        for uploaded_file in uploaded_files:
+    new_documents = []
+    new_upload_detected = False
+
+    for uploaded_file in uploaded_files:
+        if uploaded_file.name not in st.session_state["uploaded_files_names"]:
+            new_upload_detected = True
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
                 temp_pdf.write(uploaded_file.read())
-
-                # Extract documents
                 documents = extract_text_from_pdf(temp_pdf.name)
-                extracted_documents.extend(documents)
+                new_documents.extend(documents)
+                st.session_state["uploaded_files_names"].append(uploaded_file.name)
 
-        # Save extracted documents to vector store
-        vector_store.add_documents(extracted_documents)
-
-        st.success(
-            f"✅ Successfully stored {len(documents)} slide(s) from **{uploaded_file.name}**"
-        )
-
-    # Show extracted Documents
-    with st.expander("📂 View Extracted Slide Content", expanded=False):
-        for idx, doc in enumerate(extracted_documents):
-            st.text_area(
-                f"📄 Document {doc.metadata.get('page_number', idx + 1)}:",
-                doc.page_content,
-                height=150,
+    if new_upload_detected:
+        with st.spinner("Storing PDFs in Database... Please wait."):
+            vector_store.add_documents(new_documents)
+            st.session_state["extracted_documents"].extend(new_documents)
+            st.success(
+                f"Successfully stored {len(new_documents)} slide(s) from uploaded files."
             )
 
-# Generate question pipeline
-if st.button("Generate Question"):
+# --- Show Extracted Slides ---
+render_slide_content_expander(st.session_state["extracted_documents"])
+
+# --- Exercise Generation Pipeline ---
+if st.button("Generate Exercise"):
     st.divider()
 
     # Validate inputs
-    if not topic.strip() and not learning_objective.strip():
+    if (
+        not st.session_state["topic"].strip()
+        and not st.session_state["learning_objective"].strip()
+    ):
         st.warning("⚠ Please enter a topic and a learning objective.")
-    elif not topic.strip():
+    elif not st.session_state["topic"].strip():
         st.warning("⚠ Please enter a topic.")
-    elif not learning_objective.strip():
+    elif not st.session_state["learning_objective"].strip():
         st.warning("⚠ Please enter a learning objective.")
     else:
-        # 1: Classify Bloom's Taxonomy level
+
+        # --- Step 1: Classify Bloom's Taxonomy Level ---
         with st.spinner(
             "🔍 Determining the Bloom’s Taxonomy level for the learning objective..."
         ):
-            levels = bloom_classifier.classify(learning_objective)
+            levels = bloom_classifier.classify(st.session_state["learning_objective"])
 
-        if levels and levels != ["No match found"]:
+        if levels != None:
             st.success(
-                f"✅ Successfully identified Bloom's Taxonomy Level: **{', '.join(levels)}**"
+                f"Successfully identified Bloom's Taxonomy Level: **{', '.join(levels)}**"
             )
+            # Show example assignments for the detected Bloom level
+            assignments = exercise_types.get(levels[0], {}).get(
+                "example_assignments", []
+            )
+            if assignments:
+                render_assignment_expander(assignments)
         else:
             st.warning(
                 "⚠ No matching Bloom level found. Please refine the learning objective."
             )
 
-        # 2: Determine corresponding assignment sheets
-        with st.spinner("Determining corresponding example assignments..."):
-            assignments = [
-                assignment
-                for level in levels
-                for assignment in assignment_repository.get_assignments(level)
-            ]
+        # --- Step 2: Find Relevant Slides and Generate Summaries ---
+        need_new_summaries = (
+            st.session_state["summaries_topic"] != st.session_state["topic"]
+            or st.session_state["summaries_learning_objective"]
+            != st.session_state["learning_objective"]
+            or st.session_state["summaries_uploaded_files"]
+            != st.session_state["uploaded_files_names"]
+        )
 
-        # Show assignment descriptions in an expander
-        if assignments:
-            st.success("✅ Corresponding Assignment Sheets found.")
-            formatted_assignments = render_assignment_expander(assignments)
-        else:
-            st.warning("⚠ No assignment sheets found.")
+        if need_new_summaries or not st.session_state["summaries"]:
 
-        # 3: Find relevant slides and generate summaries
-        with st.spinner("🔍 Finding relevant slides and generating summaries..."):
-            related_docs = vector_store.find_related_documents(learning_objective, k=2)
-            summaries = []
-            if related_docs:
-                try:
-                    summaries = [
-                        summary_model.generate_summary(doc.page_content)
-                        for doc in related_docs
-                    ]
-                except Exception as e:
-                    st.error(
-                        "Could not generate summaries. Make sure the model is available. Try running `ollama list` to check the model status."
-                        f"Error: {e}"
+            related_docs = []
+
+            if st.session_state["extracted_documents"]:
+                with st.spinner(
+                    "🔍 Finding relevant slides and generating summaries..."
+                ):
+                    related_docs = vector_store.find_related_documents(
+                        st.session_state["learning_objective"], k=3
                     )
-            # Show summaries in an expander
-            if related_docs and summaries:
-                st.success(
-                    f"✅ Found {len(related_docs)} relevant slides. Corresponding summaries successfully generated."
-                )
-                render_summaries_expander(summaries)
-            elif related_docs:
-                st.warning("⚠ Slides were found, but no summaries could be generated.")
-            else:
-                st.warning("⚠ No relevant slides found.")
+                    if related_docs is None:
+                        st.warning(
+                            "No related documents found for this learning objective."
+                        )
+                    else:
+                        # Generate summaries for each related document
+                        try:
+                            summaries = [
+                                summary_model.generate_summary(doc.page_content)
+                                for doc in related_docs
+                            ]
+                            st.session_state["summaries"] = summaries
+                            st.session_state["summaries_topic"] = st.session_state[
+                                "topic"
+                            ]
+                            st.session_state["summaries_learning_objective"] = (
+                                st.session_state["learning_objective"]
+                            )
+                            st.session_state["summaries_uploaded_files"] = list(
+                                st.session_state["uploaded_files_names"]
+                            )
+                        except Exception as e:
+                            st.error(
+                                "Could not generate summaries. Make sure the model is available."
+                                f"Error: {e}"
+                            )
 
-        # 4: Generate question
-        with st.spinner("🧠 Generating question..."):
-            summary_contents = [s["summary"] for s in summaries if isinstance(s, dict)]
-            formatted_summaries = format_slide_summaries(summary_contents)
-
-            question = question_model.generate_question(
-                topic,
-                learning_objective,
-                formatted_summaries,
-                formatted_assignments,
-                levels[0],
-            )
-
-            if not question:
-                st.warning(
-                    "⚠ No question could be generated. Please check your inputs."
-                )
-            else:
-                st.success("✅ Question successfully generated.")
-                st.write(question)
-
-        if question:
-            # 5: Generate answer
-            with st.spinner("Generating answer..."):
-                answer = answer_model.generate_answer(question)
-                if not answer:
+                if related_docs and st.session_state["summaries"]:
+                    st.success(
+                        f"Found {len(related_docs)} relevant slides. Summaries generated."
+                    )
+                    render_summaries_expander(st.session_state["summaries"])
+                elif related_docs:
                     st.warning(
-                        "⚠ No answer could be generated. Please check your inputs."
+                        "⚠ Slides were found, but no summaries could be generated."
                     )
                 else:
-                    st.write(answer)
-                    st.divider()
+                    st.warning("⚠ No relevant slides found.")
 
-            evaluation_pipeline(
-                question,
-                formatted_assignments,
+            else:
+                st.warning("⚠ No slides available to match against.")
+        else:
+            st.success("Using previously generated summaries.")
+            render_summaries_expander(st.session_state["summaries"])
+
+        # --- Step 3: Generate Exercise ---
+        with st.spinner("🧠 Generating exercise..."):
+            extracted_summary_texts = [
+                s["summary"]
+                for s in st.session_state["summaries"]
+                if isinstance(s, dict)
+            ]
+            summaries_for_prompt = format_summaries_as_prompt(extracted_summary_texts)
+
+            raw_exercise_output = exercise_model.generate_exercise(
+                st.session_state["topic"],
+                st.session_state["learning_objective"],
+                summaries_for_prompt,
                 levels[0],
             )
+            cleaned_exercise = clean_markdown_json(raw_exercise_output)
+
+        if not cleaned_exercise:
+            st.warning(
+                "⚠ No exercise could be generated. Please check your inputs and try again."
+            )
+        else:
+            exercise_json = render_exercise(cleaned_exercise)
+            if exercise_json is None:
+                st.error(
+                    "Failed to parse the generated exercise. "
+                    "The output is not valid JSON. Please try generating the exercise again."
+                )
+            else:
+                st.session_state["generated_exercise"] = exercise_json
+
+                # --- Step 4: Evaluate ---
+                with st.spinner("📊 Evaluating generated exercise..."):
+                    evaluation_pipeline(
+                        exercise_json,
+                        levels[0],
+                        extracted_summary_texts,
+                        assignments,
+                    )

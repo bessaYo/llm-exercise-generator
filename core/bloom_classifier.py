@@ -112,4 +112,4 @@ class BloomClassifier:
             if any(stem in stemmed_verbs for stem in stems):
                 matched_levels.add(level)
 
-        return list(matched_levels) if matched_levels else ["No match found"]
+        return list(matched_levels) if matched_levels else None

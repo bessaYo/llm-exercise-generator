@@ -31,10 +31,24 @@ class VectorStore:
         self.vector_store.add_documents(documents=documents, ids=uuids)
         print(f"Successfully added {len(documents)} documents to the vector store")
 
-    def find_related_documents(self, learning_goal, k=2):
-        """Finds the most relevant documents in the vector store based on a learning goal."""
-        learning_goal_embedding = self.embedding_function.embed_query(learning_goal)
-        results = self.vector_store.similarity_search_by_vector(
-            learning_goal_embedding, k=k
+    def find_related_documents(self, learning_objective, k=3):
+        """Finds the most relevant documents in the vector store based on a learning objective."""
+        if not self.embedding_function:
+            raise ValueError("Embedding function is not initialized.")
+
+        if not self.vector_store:
+            raise ValueError("Vector store is not initialized.")
+
+        # Create embedding for the learning objective
+        learning_objective_embedding = self.embedding_function.embed_query(
+            learning_objective
         )
-        return results
+        if learning_objective_embedding is None:
+            raise ValueError("Embedding for learning goal could not be created.")
+
+        # Perform similarity search with k = 3
+        results = self.vector_store.similarity_search_by_vector(
+            learning_objective_embedding, k=k
+        )
+
+        return results if results else None
