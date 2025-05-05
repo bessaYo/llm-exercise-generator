@@ -54,7 +54,7 @@ def evaluation_pipeline(exercise: dict, target_bloom_level: str, summaries: list
     print(f"Similarity to Example Assignments: {assignment_similarity}")
     print("--" * 100)
 
-    # Export results to specified path
+    #Export results to specified path
     export_evaluation_results(
         results_path,
         exercise,

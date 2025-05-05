@@ -5,17 +5,19 @@ import string
 
 def render_instructions():
     """Shows the instructions for the app."""
-    st.title("Generating Programming Exercises with Open-Source LLM's")
+    st.title("Generating Programming Exercises with LLM's")
     st.divider()
     st.write(
         """ 
-        This tool leverages Open-Source LLMs to generate **programming-related exercises** based on **lecture slides**, a **topic**, and a **learning objective**.
+        This tool leverages Open-Source LLMs to generate **programming-related exercises** based on a **topic**, a **learning objective**, and **lecture slides**.
         
         The learning objective is classified according to a cognitive level of **Bloom’s Taxonomy** and forms the basis for the exercise generation. 
         
-        1️⃣ **Define the topic** – Specifies the subject area of the generated exercise  
-        2️⃣ **Set the learning objective** – Describes what students should learn or achieve through the exercise    
-        3️⃣ **Upload lecture slides (PDF format only)** – Extraction of key concepts and programming examples    
+        The following three inputs are required to generate a programming exercise:
+        
+        1️⃣ **Topic** – Specifies the subject area of the generated exercise.\n 
+        2️⃣ **Learning Objective** – Describes what students should learn or achieve through the exercise.\n    
+        3️⃣ **Lecture Slides** – Provide contextual input to ground the exercise.   
         """
     )
     st.divider()
@@ -23,23 +25,22 @@ def render_instructions():
 
 def render_input_fields():
     """Shows the input fields for the topic, learning objective, and file upload."""
+
     topic = st.text_input(
-        "**Topic:**",
-        value="Introduction to Haskell Programming",
+        "📌 **Enter a topic:**",
         placeholder="E.g., Introduction to Haskell Programming",
     )
     learning_objective = st.text_area(
-        "**Learning Objective:**",
-        value="Students should be able to explain quicksort",
+        "🎯 **Define the learning objective:**",
         placeholder="E.g., Students should be able to explain quicksort and its time complexity.",
     )
     uploaded_files = st.file_uploader(
-        "**Upload Lecture PDFs (optional):**",
+        "📄 **Upload Lecture PDFs:**",
         type=["pdf"],
         accept_multiple_files=True,
     )
 
-    return topic, learning_objective, uploaded_files
+    return topic.strip(), learning_objective.strip(), uploaded_files
 
 
 def render_exercise(exercise_input):

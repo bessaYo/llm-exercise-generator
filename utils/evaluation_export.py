@@ -150,12 +150,12 @@ def aggregate_rq1_metrics_table(input_base_path, output_csv_path):
 
                     # Compilation check
                     compilation_result = data.get("compilation_result", "")
-                    level_data["compilation_total"] += 1
-                    if (
-                        isinstance(compilation_result, str)
-                        and compilation_result.lower() == "success"
-                    ):
-                        level_data["compilation_success"] += 1
+                    if isinstance(
+                        compilation_result, str
+                    ) and compilation_result.lower() in ("success", "fail"):
+                        level_data["compilation_total"] += 1
+                        if compilation_result.lower() == "success":
+                            level_data["compilation_success"] += 1
 
     # Build rows
     rows = []

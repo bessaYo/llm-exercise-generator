@@ -6,23 +6,23 @@ exercise_types = {
         ),
         "example_assignments": [
             {
-                "exercise_type": "Recall function type signatures",
-                "exercise_text": "What are the type signatures of the following standard functions?",
-                "subttasks": {
-                    "subtask_1": "length",
-                    "subtask_2": "head",
-                    "subtask_3": "tail",
-                    "subtask_4": "map",
+                "exercise_type": "Recall built-in types",
+                "exercise_text": "Which of the following is a built-in type in Haskell?",
+                "subtasks": {
+                    "subtask_1": "Int",
+                    "subtask_2": "WholeNumber",
+                    "subtask_3": "Digit",
+                    "subtask_4": "IntegerNumber",
                 },
             },
             {
-                "exercise_type": "Identify keywords",
-                "exercise_text": "Which of the following are reserved keywords?",
-                "subttasks": {
-                    "subtask_1": "if",
-                    "subtask_2": "loop",
-                    "subtask_3": "where",
-                    "subtask_4": "define",
+                "exercise_type": "Recognize list comprehension syntax",
+                "exercise_text": "Which of the following is a valid Haskell list comprehension?",
+                "subtasks": {
+                    "subtask_1": "[x | x <- [1..10], even x]",
+                    "subtask_2": "[x from [1..10] if even x]",
+                    "subtask_3": "[x in [1..10] where even x]",
+                    "subtask_4": "for x in [1..10], if even x then x",
                 },
             },
         ],
@@ -44,11 +44,6 @@ exercise_types = {
                 },
             },
             {
-                "exercise_type": "Explain type errors",
-                "exercise_text": "Explain why the expression (not 'a') results in a type error in Haskell. Provide an informal argument for how the error arises.",
-                "subtasks": {},
-            },
-            {
                 "exercise_type": "Explain well-typed expressions",
                 "exercise_text": "Which of the following Haskell expressions are well typed?",
                 "subttasks": {
@@ -56,15 +51,6 @@ exercise_types = {
                     "subtask_2": "[1] ++ ['a']",
                     "subtask_3": '("1, 2",("3"))',
                     "subtask_4": "[tail, init, reverse]",
-                },
-            },
-            {
-                "exercise_type": "Explain result of functions",
-                "exercise_text": "Explain the result of the following functions:",
-                "subtasks": {
-                    "subtask_1": "foo xs = map (+1) (map (+1) xs)",
-                    "subtask_2": "bar xs = sum (map (\_ -> 1) (filter (> 7) (filter (< 13) xs)))",
-                    "subtask_3": "baz xss = map (map (+1)) xss",
                 },
             },
         ],

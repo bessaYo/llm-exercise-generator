@@ -4,19 +4,25 @@ You are an expert in computer science education. Your task is to analyze a progr
 
 Choose exactly one of the following Bloom levels, based on the cognitive process the exercise demands from the student.
 
-Identify the main mental operation required from the student by using the following definitions per level:
+Focus especially on the main **mental operation** required, and look for **keywords** that signal typical tasks at each level. Below are concise definitions and key verbs per Bloom level:
 
-- Remember: Remember-level exercises require students to recall specific facts, definitions, or syntax. Exercises should prompt precise retrieval of knowledge, such as exact syntax, keywords, or function names, without requiring deeper interpretation.
+- **Remember**: Recall facts, definitions, or syntax without deeper interpretation.  
+  Typical verbs: *recall, name, list, identify, define, match*
 
-- Understand: Understand-level exercises ask students to clearly explain concepts, interpret code behaviors, or describe functionalities using their own words. Exercises must prompt detailed explanations or illustrative examples, encouraging deep comprehension rather than simple recall.
+- **Understand**: Explain concepts, code behavior, or interpret functionality in own words.  
+  Typical verbs: *explain, describe, summarize, interpret, discuss*
 
-- Apply: Apply-level exercises require students to demonstrate their ability to use known concepts or functions in new and practical contexts. Tasks should clearly specify novel scenarios or data, demanding active application of previously learned methods rather than direct repetition.
+- **Apply**: Use known techniques, functions, or concepts in a new situation or context.  
+  Typical verbs: *apply, use, demonstrate, solve, illustrate*
 
-- Analyze: Analyze-level exercises prompt students to critically examine code structures, behaviors, or logic. Tasks must involve detailed investigation or comparisons, clearly requiring identification of patterns, differences, or potential issues in code.
+- **Analyze**: Examine structure or behavior, compare implementations, identify problems.  
+  Typical verbs: *analyze, differentiate, compare, contrast, categorize*
 
-- Evaluate: Evaluate-level exercises require students to judge the correctness, efficiency, readability, or quality of provided code. Exercises must clearly set criteria for evaluation, guiding students to substantiate their judgments with precise reasoning.
+- **Evaluate**: Judge code quality, correctness, efficiency, or style based on criteria.  
+  Typical verbs: *evaluate, justify, defend, argue, critique*
 
-- Create: Create-level exercises challenge students to design new solutions, data structures, or significant code reorganizations. Tasks must clearly prompt original and creative production, encouraging novel designs rather than modifications of provided examples.
+- **Create**: Design original code, structures, or solutions from scratch.  
+  Typical verbs: *design, create, develop, formulate, invent*
 
 ---
 

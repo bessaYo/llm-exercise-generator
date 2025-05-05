@@ -46,29 +46,6 @@ Your summary will serve as a foundation for generating programming exercises lat
 """
 
 
-def create_answer_prompt(generated_exercise):
-    return f"""
-### SYSTEM
-You are a programming assistant. Your task is to provide a correct and complete answer to the following programming exercise.
-
----
-**Exercise:**
-{generated_exercise}
-
----
-**Guidelines:**
-- Be clear, concise, and technically correct.
-- Prefer code where applicable.
-- Focus only on what is needed to solve the exercise.
-
----
-Only output in the following markdown format:**
-
-### Answer:
-<Insert the correct answer here, including code if relevant>
-"""
-
-
 def create_exercise_prompt(topic, learning_objective, summaries, bloom_level):
     bloom_level = bloom_level.lower()
     guidance = exercise_types[bloom_level]["guidance"]
@@ -125,6 +102,7 @@ Example Exercises:
 - Use Markdown formatting for all code elements (e.g., function names, expressions, type annotations). Enclose all such elements in backticks (`` ` ``).
 - If the task consists of multiple parts, include a `"subtasks"` field with subtasks labeled as `"subtask_1"`, `"subtask_2"`, etc.
 - If the task only contains a single step, omit the `"subtasks"` field and include the full instruction in `"exercise_text"`.
+- If the task involves code, embed the code directly inside the `"exercise_text"` using Markdown formatting with triple backticks and `haskell` as language.
 - Do not include any explanations, meta-comments, formatting instructions, or additional text outside the JSON object.
 
 ---
@@ -132,8 +110,8 @@ Example Exercises:
 ### OUTPUT FORMAT
 
 {{
-  "exercise_type": "<Short name describing the task type, e.g. 'Explain function behavior'>",
-  "exercise_text": "<Introductory instruction describing the main task. Follow the style of the examples. Use Markdown formatting for all code elements.>",
+  "exercise_type": "<Short name describing the exercise type, e.g. 'Explain function behavior'>",
+  "exercise_text": "<Instruction. If code is needed, embed it using a Markdown code block (```haskell ... ```).>"
   "subtasks": {{
     "subtask_1": "<First expression or question. Use backticks for any Haskell code or notation.>",
     "subtask_2": "<Second expression or question.>"

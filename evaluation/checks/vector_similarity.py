@@ -13,6 +13,7 @@ def compute_similarity(base_text: str, comparison_texts: list) -> list:
     )
     similarities = util.cos_sim(base_embedding, comparison_embeddings)[0]
 
+    # Convert similarities to a list of rounded values
     return [round(sim.item(), 3) for sim in similarities]
 
 

@@ -12,6 +12,11 @@ IGNORE_RULE_IDS = {
     "COMMA_COMPOUND_SENTENCE_2",  # allows compound sentences without commas
     "DOUBLE_PUNCTUATION",  # to allow double punctuation like [1..10]
     "COMMA_PARENTHESIS_WHITESPACE" # allows for parentheses in code
+    "EN_UNPAIRED_QUOTES",  # allows for quotes in code
+    "EN_UNPAIRED_BRACKETS",  # allows for brackets in code
+    "EN_UNPAIRED_BRACES",  # allows for braces in code
+    "UPPERCASE_SENTENCE_START",  # allows for lowercase letters in code
+    "APOS_SPACE_CONTRACTION"
 }
 
 

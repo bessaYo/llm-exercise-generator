@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import streamlit as st
 import tempfile
 import os
@@ -9,6 +8,7 @@ from utils.formatters import format_summaries_as_prompt
 from utils.helper_functions import (
     extract_text_from_pdf,
     clean_markdown_json,
+    get_available_models,
 )
 from evaluation.evaluation_pipeline import evaluation_pipeline
 from components.sidebar import render_sidebar
@@ -26,6 +26,29 @@ from core.example_assignments import exercise_types
 
 # Disable parallel tokenizers warning
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# --- Check for local models ---
+available_models = get_available_models()
+if not available_models:
+    st.warning(
+        "No models found in the local Ollama environment.\n\n"
+        "Please install the required models by running the following commands in your terminal:\n\n"
+        "`ollama pull qwen2.5-coder:7b`\n\n"
+        "`ollama pull gemma3:4b`\n\n"
+        "Restart the app after installation.\n\n"
+    )
+    st.stop()
+
+# Fallback for default models
+# These models should be available in the local Ollama environment
+default_exercise_model = "qwen2.5-coder:7b"
+default_summary_model = "gemma3:4b"
+
+# If the default models are not available, select the first available model
+if default_exercise_model not in available_models:
+    default_exercise_model = available_models[0]
+if default_summary_model not in available_models:
+    default_summary_model = available_models[0]
 
 # --- Session State Initialization ---
 if "vector_store" not in st.session_state:
@@ -50,9 +73,8 @@ if "summaries_uploaded_files" not in st.session_state:
 vector_store = st.session_state["vector_store"]
 
 # --- Initialize LLMs and Bloom Classifier ---
-exercise_model = LLMProcessor(model_name="qwen2.5-coder:7b", num_ctx=8192)
-answer_model = LLMProcessor(model_name="qwen2.5-coder:7b", num_ctx=8192)
-summary_model = LLMProcessor(model_name="gemma3:4b", num_ctx=4096)
+exercise_model = LLMProcessor(model_name=default_exercise_model)
+summary_model = LLMProcessor(model_name=default_summary_model)
 bloom_classifier = BloomClassifier()
 
 # --- HTML Styling ---
@@ -67,9 +89,7 @@ st.html(
 )
 
 # --- Sidebar and Inputs ---
-exercise_model, answer_model, summary_model = render_sidebar(
-    exercise_model, answer_model, summary_model
-)
+exercise_model, summary_model = render_sidebar(exercise_model, summary_model)
 
 render_instructions()
 topic_input, learning_objective_input, uploaded_files = render_input_fields()
@@ -112,13 +132,12 @@ if st.button("Generate Exercise"):
     # Validate inputs
     if (
         not st.session_state["topic"].strip()
-        and not st.session_state["learning_objective"].strip()
+        or not st.session_state["learning_objective"].strip()
+        or not st.session_state["extracted_documents"]
     ):
-        st.warning("⚠ Please enter a topic and a learning objective.")
-    elif not st.session_state["topic"].strip():
-        st.warning("⚠ Please enter a topic.")
-    elif not st.session_state["learning_objective"].strip():
-        st.warning("⚠ Please enter a learning objective.")
+        st.warning(
+            "Missing input detected. Please make sure to provide a Topic, a Learning Objective, and at least one Lecture Slide."
+        )
     else:
 
         # --- Step 1: Classify Bloom's Taxonomy Level ---
@@ -196,13 +215,13 @@ if st.button("Generate Exercise"):
                     render_summaries_expander(st.session_state["summaries"])
                 elif related_docs:
                     st.warning(
-                        "⚠ Slides were found, but no summaries could be generated."
+                        "Slides were found, but no summaries could be generated."
                     )
                 else:
-                    st.warning("⚠ No relevant slides found.")
+                    st.warning("No relevant slides found.")
 
             else:
-                st.warning("⚠ No slides available to match against.")
+                st.warning("No slides available to match against.")
         else:
             st.success("Using previously generated summaries.")
             render_summaries_expander(st.session_state["summaries"])
@@ -216,25 +235,21 @@ if st.button("Generate Exercise"):
             ]
             summaries_for_prompt = format_summaries_as_prompt(extracted_summary_texts)
 
-            raw_exercise_output = exercise_model.generate_exercise(
+            exercise_json = exercise_model.generate_exercise(
                 st.session_state["topic"],
                 st.session_state["learning_objective"],
                 summaries_for_prompt,
                 levels[0],
             )
-            cleaned_exercise = clean_markdown_json(raw_exercise_output)
 
-        if not cleaned_exercise:
+        if not exercise_json:
             st.warning(
-                "⚠ No exercise could be generated. Please check your inputs and try again."
+                "No exercise could be generated. Please check your inputs and try again."
             )
         else:
-            exercise_json = render_exercise(cleaned_exercise)
-            if exercise_json is None:
-                st.error(
-                    "Failed to parse the generated exercise. "
-                    "The output is not valid JSON. Please try generating the exercise again."
-                )
+            rendered = render_exercise(exercise_json)
+            if rendered is None:
+                st.error("Failed to render the generated exercise. Please try again.")
             else:
                 st.session_state["generated_exercise"] = exercise_json
 
