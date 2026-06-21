@@ -16,6 +16,7 @@ class LLMProcessor:
 
         self.name = "llm_processor"
         self.model_name = model_name
+        self.num_ctx = num_ctx
         self.model = ChatOllama(model=model_name, num_ctx=num_ctx)
         self.parser = StrOutputParser()
         self.chain = self.model | self.parser
@@ -24,7 +25,7 @@ class LLMProcessor:
         """Updates the LLM model."""
 
         self.model_name = model_name
-        self.model = ChatOllama(model=model_name, num_ctx=2048)
+        self.model = ChatOllama(model=model_name, num_ctx=self.num_ctx)
         self.chain = self.model | self.parser
 
     def generate_exercise(self, topic, learning_objective, summaries, level):

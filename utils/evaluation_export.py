@@ -50,6 +50,7 @@ def export_evaluation_results(
     update_bloom_consistency_table(base_results_path)
     update_rq1_metrics_table(base_results_path)
     update_similarity_metrics_table(base_results_path)
+    update_compilation_table(base_results_path)
 
     print(f"Exported the results of the evaluated exercise to {file_path}")
     print("--" * 75)
@@ -148,13 +149,18 @@ def aggregate_rq1_metrics_table(input_base_path, output_csv_path):
                     if readability is not None:
                         level_data["readability_scores"].append(readability)
 
-                    # Compilation check
+                    # Compilation check. The stored value may be the full result
+                    # dict (with status/reason/stderr) or, for older runs, just the
+                    # status string. Exercises without Haskell code are excluded.
                     compilation_result = data.get("compilation_result", "")
-                    if isinstance(
-                        compilation_result, str
-                    ) and compilation_result.lower() in ("success", "fail"):
+                    if isinstance(compilation_result, dict):
+                        status = compilation_result.get("status", "")
+                    else:
+                        status = compilation_result
+                    status = (status or "").lower()
+                    if status == "success" or status.startswith("fail"):
                         level_data["compilation_total"] += 1
-                        if compilation_result.lower() == "success":
+                        if status == "success":
                             level_data["compilation_success"] += 1
 
     # Build rows
@@ -175,6 +181,8 @@ def aggregate_rq1_metrics_table(input_base_path, output_csv_path):
             if level_data["readability_scores"]
             else 0.0
         )
+        # Levels whose exercises contain no Haskell code have nothing to compile;
+        # report "-" rather than a misleading 0%.
         compile_pct = (
             round(
                 level_data["compilation_success"]
@@ -183,7 +191,7 @@ def aggregate_rq1_metrics_table(input_base_path, output_csv_path):
                 1,
             )
             if level_data["compilation_total"] > 0
-            else 0.0
+            else "-"
         )
 
         rows.append(
@@ -270,3 +278,83 @@ def aggregate_similarity_table(base_path, output_csv_path):
 def update_similarity_metrics_table(base_path):
     output_csv_path = os.path.join(base_path, "tables", "similarity_metrics.csv")
     return aggregate_similarity_table(base_path, output_csv_path)
+
+
+def aggregate_compilation_table(base_path, output_csv_path):
+    """
+    Builds a compilation failure taxonomy across all evaluated exercises.
+
+    For every Haskell code block it counts passes and failures, splitting the
+    failures into 'incomplete' (truncated/missing-definition fragments) and
+    'genuine' (complete code with a real type/semantic error). It reports both
+    the overall success rate and the rate restricted to complete code (i.e. with
+    incomplete fragments removed from the denominator), the latter being the more
+    meaningful indicator of the model's ability to produce correct Haskell.
+    Requires result JSONs that store the full compilation_result dict.
+    """
+    exercises_path = os.path.join(base_path, "exercises")
+    bloom_levels = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+
+    rows = []
+    tot = {"snippets": 0, "passed": 0, "incomplete": 0, "genuine": 0}
+    for level in bloom_levels:
+        level_path = os.path.join(exercises_path, level)
+        if not os.path.isdir(level_path):
+            continue
+
+        snippets = passed = incomplete = genuine = 0
+        for filename in os.listdir(level_path):
+            if not filename.endswith(".json"):
+                continue
+            with open(os.path.join(level_path, filename), "r", encoding="utf-8") as f:
+                comp = json.load(f).get("compilation_result", {})
+            if not isinstance(comp, dict):
+                continue  # older run without detailed compilation data
+            blocks = comp.get("compiled_blocks", 0)
+            if blocks == 0:
+                continue
+            snippets += blocks
+            errors = comp.get("errors", [])
+            passed += blocks - len(errors)
+            for e in errors:
+                if e.get("reason") == "incomplete":
+                    incomplete += 1
+                else:
+                    genuine += 1
+
+        if snippets == 0:
+            continue
+        complete = snippets - incomplete
+        rows.append({
+            "Bloom Level": level,
+            "Code Snippets": snippets,
+            "Passed": passed,
+            "Failed (incomplete)": incomplete,
+            "Failed (genuine)": genuine,
+            "Success (all) %": round(100 * passed / snippets, 1),
+            "Success (complete only) %": round(100 * passed / complete, 1) if complete else "-",
+        })
+        for k, v in zip(tot, (snippets, passed, incomplete, genuine)):
+            tot[k] += v
+
+    if rows:
+        complete = tot["snippets"] - tot["incomplete"]
+        rows.append({
+            "Bloom Level": "ALL",
+            "Code Snippets": tot["snippets"],
+            "Passed": tot["passed"],
+            "Failed (incomplete)": tot["incomplete"],
+            "Failed (genuine)": tot["genuine"],
+            "Success (all) %": round(100 * tot["passed"] / tot["snippets"], 1),
+            "Success (complete only) %": round(100 * tot["passed"] / complete, 1) if complete else "-",
+        })
+
+    df = pd.DataFrame(rows)
+    os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
+    df.to_csv(output_csv_path, index=False)
+    return df
+
+
+def update_compilation_table(base_path):
+    output_csv_path = os.path.join(base_path, "tables", "compilation_taxonomy.csv")
+    return aggregate_compilation_table(base_path, output_csv_path)

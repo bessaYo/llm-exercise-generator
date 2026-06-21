@@ -61,7 +61,7 @@ def evaluation_pipeline(exercise: dict, target_bloom_level: str, summaries: list
         target_bloom_level,
         grammar_errors,
         readability_score,
-        compilation_result.get("status"),
+        compilation_result,
         bloom_consistency_results,
         summary_similarity,
         assignment_similarity,

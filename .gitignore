@@ -13,3 +13,6 @@ __pycache__/
 
 # evaluation results
 evaluation/results/
+
+# course material (not for redistribution)
+FP Lecture Notes.pdf

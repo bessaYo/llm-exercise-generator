@@ -110,9 +110,13 @@ if uploaded_files:
             new_upload_detected = True
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
                 temp_pdf.write(uploaded_file.read())
-                documents = extract_text_from_pdf(temp_pdf.name)
+                temp_pdf_path = temp_pdf.name
+            try:
+                documents = extract_text_from_pdf(temp_pdf_path)
                 new_documents.extend(documents)
                 st.session_state["uploaded_files_names"].append(uploaded_file.name)
+            finally:
+                os.remove(temp_pdf_path)
 
     if new_upload_detected:
         with st.spinner("Storing PDFs in Database... Please wait."):
@@ -146,7 +150,7 @@ if st.button("Generate Exercise"):
         ):
             levels = bloom_classifier.classify(st.session_state["learning_objective"])
 
-        if levels != None:
+        if levels is not None:
             st.success(
                 f"Successfully identified Bloom's Taxonomy Level: **{', '.join(levels)}**"
             )
@@ -160,6 +164,7 @@ if st.button("Generate Exercise"):
             st.warning(
                 "⚠ No matching Bloom level found. Please refine the learning objective."
             )
+            st.stop()
 
         # --- Step 2: Find Relevant Slides and Generate Summaries ---
         need_new_summaries = (
