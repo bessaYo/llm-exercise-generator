@@ -16,7 +16,7 @@ These are valid points. Lecture slides can be incomplete and the LLM summarisati
 
 This is a fair point. The exercises were not validated by instructors. We state this as a limitation in Section 6 and name, as future work in Section 7, an expert review of a sample (rating objective alignment, difficulty, and classroom readiness) to confirm pedagogical quality.
 
-More details on how we addressed each reviewer's suggestions can be found in the attached PDF file (indicated by indented bullet points, as above).
+The detailed responses to each reviewer's comments follow below.
 
 Best regards
 
